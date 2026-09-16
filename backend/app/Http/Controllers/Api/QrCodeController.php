@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ScanQrCodeRequest;
+use App\Http\Resources\EquipmentRequestResource;
+use App\Http\Resources\EquipmentResource;
+use App\Http\Resources\EquipmentTransactionResource;
 use App\Models\Equipment;
 use App\Models\EquipmentRequest;
 use App\Models\EquipmentTransaction;
@@ -10,7 +14,6 @@ use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Writer\PngWriter;
-use Illuminate\Http\Request;
 
 /**
  * QR Code-based equipment release/return.
@@ -24,14 +27,14 @@ class QrCodeController extends Controller
      */
     public function show(Equipment $equipment)
     {
-        $result = Builder::create()
-            ->writer(new PngWriter)
-            ->data($equipment->qr_code)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(300)
-            ->margin(10)
-            ->build();
+        $result = (new Builder(
+            writer: new PngWriter,
+            data: $equipment->qr_code,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+        ))->build();
 
         return response()->json([
             'equipment_id' => $equipment->id,
@@ -46,9 +49,9 @@ class QrCodeController extends Controller
      * request that is actionable right now (approved & awaiting release,
      * or released & awaiting return).
      */
-    public function scan(Request $request)
+    public function scan(ScanQrCodeRequest $request)
     {
-        $data = $request->validate(['code' => ['required', 'string']]);
+        $data = $request->validated();
 
         $equipment = Equipment::where('qr_code', $data['code'])->first();
         if (! $equipment) {
@@ -65,9 +68,9 @@ class QrCodeController extends Controller
         })->where('status', 'released')->first();
 
         return response()->json([
-            'equipment' => $equipment,
-            'awaiting_release_request' => $awaitingRelease,
-            'awaiting_return_transaction' => $awaitingReturn?->load('equipmentRequest.user'),
+            'equipment' => new EquipmentResource($equipment),
+            'awaiting_release_request' => $awaitingRelease ? new EquipmentRequestResource($awaitingRelease) : null,
+            'awaiting_return_transaction' => $awaitingReturn ? new EquipmentTransactionResource($awaitingReturn->load('equipmentRequest.user')) : null,
         ]);
     }
 }

@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ReviewConcernRequest;
+use App\Http\Requests\StoreConcernRequest;
+use App\Http\Resources\ConcernResource;
 use App\Models\Equipment;
 use App\Models\EquipmentConcern;
+use App\Models\User;
 use App\Notifications\ConcernNotification;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 /**
  * Damage & Concern Management.
@@ -24,44 +27,40 @@ class ConcernController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        return response()->json($query->orderByDesc('id')->paginate(20));
+        return ConcernResource::collection($query->orderByDesc('id')->paginate(20));
     }
 
-    public function store(Request $request)
+    public function store(StoreConcernRequest $request)
     {
-        $data = $request->validate([
-            'equipment_id' => ['required', 'exists:equipment,id'],
-            'equipment_transaction_id' => [
-                'nullable',
-                Rule::exists('equipment_transactions', 'id')
-                    ->where(fn ($query) => $query->where('equipment_id', $request->input('equipment_id'))),
-            ],
-            'description' => ['required', 'string'],
-            'severity' => ['required', 'in:minor,major,critical'],
-        ]);
+        $data = $request->validated();
 
         $data['reported_by'] = $request->user()->id;
 
         $concern = EquipmentConcern::create($data);
+        $equipment = $concern->equipment;
 
-        return response()->json($concern->load('equipment'), 201);
+        User::query()
+            ->where('role', 'admin')
+            ->where('is_active', true)
+            ->get()
+            ->each(fn (User $admin) => $admin->notify(new ConcernNotification(
+                $concern->id, $equipment->name, 'reported'
+            )));
+
+        return (new ConcernResource($concern->load('equipment')))->response()->setStatusCode(201);
     }
 
     public function show(EquipmentConcern $concern)
     {
-        return response()->json($concern->load(['equipment', 'reporter', 'reviewer', 'transaction']));
+        return new ConcernResource($concern->load(['equipment', 'reporter', 'reviewer', 'transaction']));
     }
 
     /**
      * Admin-only: review the concern and optionally update the equipment condition.
      */
-    public function review(Request $request, EquipmentConcern $concern)
+    public function review(ReviewConcernRequest $request, EquipmentConcern $concern)
     {
-        $data = $request->validate([
-            'status' => ['required', 'in:reviewed,resolved'],
-            'admin_remarks' => ['nullable', 'string'],
-            'update_condition' => ['nullable', 'in:good,fair,damaged,under_repair,lost'],
-        ]);
+        $data = $request->validated();
 
         $concern->update([
             'status' => $data['status'],
@@ -80,6 +79,6 @@ class ConcernController extends Controller
             $concern->id, $concern->equipment->name, $data['status']
         ));
 
-        return response()->json($concern->fresh(['equipment']));
+        return new ConcernResource($concern->fresh(['equipment']));
     }
 }

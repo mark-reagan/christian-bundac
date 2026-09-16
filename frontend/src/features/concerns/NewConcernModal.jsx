@@ -1,0 +1,90 @@
+import { useEffect, useState } from 'react'
+import Modal from '../../components/ui/Modal'
+import Select from '../../components/ui/Select'
+import Textarea from '../../components/ui/Textarea'
+import Button from '../../components/ui/Button'
+import ErrorAlert from '../../components/ui/ErrorAlert'
+import { useApiRequest } from '../../hooks/useApiRequest'
+import { CONCERN_SEVERITIES } from '../../lib/constants'
+import { equipmentApi } from '../equipment/api'
+import { concernsApi } from './api'
+
+const EMPTY = { equipment_id: '', description: '', severity: 'minor' }
+
+export default function NewConcernModal({ open, onClose, onSaved }) {
+  const [form, setForm] = useState(EMPTY)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const { data: equipmentList } = useApiRequest(
+    (signal) => (open ? equipmentApi.list({ per_page: 100 }, signal) : Promise.resolve(null)),
+    [open]
+  )
+
+  useEffect(() => {
+    if (open) {
+      setForm(EMPTY)
+      setError(null)
+    }
+  }, [open])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      await concernsApi.create(form)
+      onSaved?.()
+      onClose()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Report Equipment Concern">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Select
+          label="Equipment"
+          required
+          value={form.equipment_id}
+          onChange={(e) => setForm({ ...form, equipment_id: e.target.value })}
+        >
+          <option value="">Select equipment…</option>
+          {equipmentList?.data?.map((eq) => (
+            <option key={eq.id} value={eq.id}>
+              {eq.name} ({eq.asset_code})
+            </option>
+          ))}
+        </Select>
+        <Select label="Severity" value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })}>
+          {CONCERN_SEVERITIES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </Select>
+        <Textarea
+          label="Description"
+          required
+          placeholder="Describe the damage or concern…"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+
+        <ErrorAlert error={error} />
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={loading}>
+            Submit report
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}

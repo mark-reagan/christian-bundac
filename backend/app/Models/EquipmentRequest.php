@@ -3,13 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class EquipmentRequest extends Model
 {
     protected $fillable = [
-        'user_id', 'equipment_id', 'quantity', 'purpose', 'start_date', 'end_date',
+        'tracking_token', 'user_id', 'equipment_id', 'quantity', 'purpose', 'start_date', 'end_date',
         'status', 'decline_reason', 'approved_by', 'approved_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (EquipmentRequest $request) {
+            $request->tracking_token ??= (string) Str::uuid();
+        });
+    }
 
     protected $casts = [
         'start_date' => 'datetime',

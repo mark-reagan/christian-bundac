@@ -3,8 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeclineRequest;
+use App\Http\Requests\StoreSupplyRequestRequest;
+use App\Http\Resources\SupplyRequestResource;
 use App\Models\Supply;
 use App\Models\SupplyRequest;
+use App\Models\User;
+use App\Notifications\AwaitingReleaseNotification;
+use App\Notifications\NewRequestNotification;
 use App\Notifications\RequestStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +33,7 @@ class SupplyRequestController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        return response()->json($query->orderByDesc('id')->paginate(20));
+        return SupplyRequestResource::collection($query->orderByDesc('id')->paginate(20));
     }
 
     public function show(Request $request, SupplyRequest $supplyRequest)
@@ -37,22 +43,13 @@ class SupplyRequestController extends Controller
             abort(403, 'You may only view your own requests.');
         }
 
-        return response()->json($supplyRequest->load(['supply', 'user', 'approver', 'transaction']));
+        return new SupplyRequestResource($supplyRequest->load(['supply', 'user', 'approver', 'transaction']));
     }
 
-    public function store(Request $request)
+    public function store(StoreSupplyRequestRequest $request)
     {
         $user = $request->user();
-
-        if ($user->role !== 'faculty') {
-            return response()->json(['message' => 'Only faculty accounts may request supplies.'], 403);
-        }
-
-        $data = $request->validate([
-            'supply_id' => ['required', 'exists:supplies,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
-            'purpose' => ['required', 'string'],
-        ]);
+        $data = $request->validated();
 
         $supply = Supply::findOrFail($data['supply_id']);
 
@@ -74,7 +71,18 @@ class SupplyRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        return response()->json($supplyRequest->load('supply'), 201);
+        User::query()
+            ->where('role', 'admin')
+            ->where('is_active', true)
+            ->get()
+            ->each(fn (User $admin) => $admin->notify(new NewRequestNotification(
+                'supply',
+                $supplyRequest->id,
+                $supply->name,
+                $user->name,
+            )));
+
+        return (new SupplyRequestResource($supplyRequest->load('supply')))->response()->setStatusCode(201);
     }
 
     public function approve(Request $request, SupplyRequest $supplyRequest)
@@ -97,18 +105,26 @@ class SupplyRequestController extends Controller
             'supply', $supplyRequest->id, 'approved', null, $supplyRequest->supply->name
         ));
 
-        return response()->json($supplyRequest->fresh(['supply']));
+        User::query()
+            ->whereIn('role', ['admin', 'staff'])
+            ->where('is_active', true)
+            ->get()
+            ->each(fn (User $recipient) => $recipient->notify(new AwaitingReleaseNotification(
+                'supply',
+                $supplyRequest->id,
+                $supplyRequest->supply->name,
+            )));
+
+        return new SupplyRequestResource($supplyRequest->fresh(['supply']));
     }
 
-    public function decline(Request $request, SupplyRequest $supplyRequest)
+    public function decline(DeclineRequest $request, SupplyRequest $supplyRequest)
     {
         if ($supplyRequest->status !== 'pending') {
             return response()->json(['message' => 'Only pending requests can be declined.'], 422);
         }
 
-        $data = $request->validate([
-            'decline_reason' => ['required', 'string'],
-        ]);
+        $data = $request->validated();
 
         $supplyRequest->update([
             'status' => 'declined',
@@ -121,7 +137,7 @@ class SupplyRequestController extends Controller
             'supply', $supplyRequest->id, 'declined', $data['decline_reason'], $supplyRequest->supply->name
         ));
 
-        return response()->json($supplyRequest->fresh());
+        return new SupplyRequestResource($supplyRequest->fresh());
     }
 
     public function cancel(Request $request, SupplyRequest $supplyRequest)
@@ -136,6 +152,6 @@ class SupplyRequestController extends Controller
 
         $supplyRequest->update(['status' => 'cancelled']);
 
-        return response()->json($supplyRequest->fresh());
+        return new SupplyRequestResource($supplyRequest->fresh());
     }
 }

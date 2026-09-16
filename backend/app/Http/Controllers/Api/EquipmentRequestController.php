@@ -3,8 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeclineRequest;
+use App\Http\Requests\StoreEquipmentReservationRequest;
+use App\Http\Resources\EquipmentRequestResource;
 use App\Models\Equipment;
 use App\Models\EquipmentRequest;
+use App\Models\User;
+use App\Notifications\AwaitingReleaseNotification;
+use App\Notifications\NewRequestNotification;
 use App\Notifications\RequestStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -30,32 +36,20 @@ class EquipmentRequestController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        return response()->json($query->orderByDesc('id')->paginate(20));
+        return EquipmentRequestResource::collection($query->orderByDesc('id')->paginate(20));
     }
 
     public function show(Request $request, EquipmentRequest $equipmentRequest)
     {
         $this->authorizeOwnerOrStaffAdmin($request, $equipmentRequest);
 
-        return response()->json($equipmentRequest->load(['equipment', 'user', 'approver', 'transaction']));
+        return new EquipmentRequestResource($equipmentRequest->load(['equipment', 'user', 'approver', 'transaction']));
     }
 
-    public function store(Request $request)
+    public function store(StoreEquipmentReservationRequest $request)
     {
         $user = $request->user();
-
-        // Only faculty and outsiders may request equipment.
-        if (! in_array($user->role, ['faculty', 'outsider'], true)) {
-            return response()->json(['message' => 'Only faculty and outsider/LGU accounts may request equipment.'], 403);
-        }
-
-        $data = $request->validate([
-            'equipment_id' => ['required', 'exists:equipment,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
-            'purpose' => ['required', 'string'],
-            'start_date' => ['required', 'date', 'after_or_equal:today'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-        ]);
+        $data = $request->validated();
 
         $equipment = Equipment::findOrFail($data['equipment_id']);
 
@@ -79,7 +73,18 @@ class EquipmentRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        return response()->json($equipmentRequest->load('equipment'), 201);
+        User::query()
+            ->where('role', 'admin')
+            ->where('is_active', true)
+            ->get()
+            ->each(fn (User $admin) => $admin->notify(new NewRequestNotification(
+                'equipment',
+                $equipmentRequest->id,
+                $equipment->name,
+                $user->name,
+            )));
+
+        return (new EquipmentRequestResource($equipmentRequest->load('equipment')))->response()->setStatusCode(201);
     }
 
     public function approve(Request $request, EquipmentRequest $equipmentRequest)
@@ -107,18 +112,26 @@ class EquipmentRequestController extends Controller
             'equipment', $equipmentRequest->id, 'approved', null, $equipment->name
         ));
 
-        return response()->json($equipmentRequest->fresh(['equipment']));
+        User::query()
+            ->whereIn('role', ['admin', 'staff'])
+            ->where('is_active', true)
+            ->get()
+            ->each(fn (User $recipient) => $recipient->notify(new AwaitingReleaseNotification(
+                'equipment',
+                $equipmentRequest->id,
+                $equipment->name,
+            )));
+
+        return new EquipmentRequestResource($equipmentRequest->fresh(['equipment']));
     }
 
-    public function decline(Request $request, EquipmentRequest $equipmentRequest)
+    public function decline(DeclineRequest $request, EquipmentRequest $equipmentRequest)
     {
         if ($equipmentRequest->status !== 'pending') {
             return response()->json(['message' => 'Only pending requests can be declined.'], 422);
         }
 
-        $data = $request->validate([
-            'decline_reason' => ['required', 'string'],
-        ]);
+        $data = $request->validated();
 
         $equipmentRequest->update([
             'status' => 'declined',
@@ -131,7 +144,7 @@ class EquipmentRequestController extends Controller
             'equipment', $equipmentRequest->id, 'declined', $data['decline_reason'], $equipmentRequest->equipment->name
         ));
 
-        return response()->json($equipmentRequest->fresh());
+        return new EquipmentRequestResource($equipmentRequest->fresh());
     }
 
     public function cancel(Request $request, EquipmentRequest $equipmentRequest)
@@ -152,7 +165,7 @@ class EquipmentRequestController extends Controller
 
         $equipmentRequest->update(['status' => 'cancelled']);
 
-        return response()->json($equipmentRequest->fresh());
+        return new EquipmentRequestResource($equipmentRequest->fresh());
     }
 
     private function authorizeOwnerOrStaffAdmin(Request $request, EquipmentRequest $equipmentRequest): void

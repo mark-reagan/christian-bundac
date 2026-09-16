@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Equipment extends Model
 {
@@ -10,12 +11,19 @@ class Equipment extends Model
 
     protected $fillable = [
         'name', 'asset_code', 'category', 'description', 'total_quantity',
-        'available_quantity', 'condition', 'status', 'qr_code', 'is_active',
+        'available_quantity', 'condition', 'status', 'qr_code', 'barcode', 'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Equipment $equipment) {
+            $equipment->barcode ??= 'EQ-'.Str::upper(Str::random(10));
+        });
+    }
 
     public function requests()
     {
@@ -29,7 +37,7 @@ class Equipment extends Model
 
     public function refreshStatus(): void
     {
-        if ($this->available_quantity <= 0) {
+        if (! in_array($this->condition, ['good', 'fair', 'damaged'], true) || $this->available_quantity <= 0) {
             $this->status = 'unavailable';
         } elseif ($this->available_quantity < $this->total_quantity) {
             $this->status = 'partially_available';

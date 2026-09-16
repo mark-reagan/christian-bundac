@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ReleaseEquipmentRequest;
+use App\Http\Requests\ReturnEquipmentRequest;
+use App\Http\Resources\EquipmentTransactionResource;
+use App\Http\Resources\SupplyTransactionResource;
 use App\Models\EquipmentRequest;
 use App\Models\EquipmentTransaction;
 use App\Models\SupplyRequest;
@@ -16,15 +20,13 @@ use Illuminate\Http\Request;
  */
 class ReleaseReturnController extends Controller
 {
-    public function releaseEquipment(Request $request, EquipmentRequest $equipmentRequest)
+    public function releaseEquipment(ReleaseEquipmentRequest $request, EquipmentRequest $equipmentRequest)
     {
         if ($equipmentRequest->status !== 'approved') {
             return response()->json(['message' => 'Only approved requests can be released.'], 422);
         }
 
-        $data = $request->validate([
-            'condition_on_release' => ['nullable', 'string', 'max:255'],
-        ]);
+        $data = $request->validated();
 
         $transaction = EquipmentTransaction::create([
             'equipment_request_id' => $equipmentRequest->id,
@@ -40,19 +42,16 @@ class ReleaseReturnController extends Controller
             'equipment', $equipmentRequest->id, 'released', $equipmentRequest->equipment->name
         ));
 
-        return response()->json($transaction->load('equipmentRequest.equipment'), 201);
+        return (new EquipmentTransactionResource($transaction->load('equipmentRequest.equipment')))->response()->setStatusCode(201);
     }
 
-    public function returnEquipment(Request $request, EquipmentTransaction $equipmentTransaction)
+    public function returnEquipment(ReturnEquipmentRequest $request, EquipmentTransaction $equipmentTransaction)
     {
         if ($equipmentTransaction->status !== 'released') {
             return response()->json(['message' => 'This transaction has already been returned.'], 422);
         }
 
-        $data = $request->validate([
-            'condition_on_return' => ['required', 'in:good,fair,damaged,under_repair,lost'],
-            'remarks' => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
 
         $equipmentRequest = $equipmentTransaction->equipmentRequest;
         $equipment = $equipmentRequest->equipment;
@@ -67,8 +66,8 @@ class ReleaseReturnController extends Controller
 
         $equipmentRequest->update(['status' => 'completed']);
 
-        // Only usable returned equipment goes back into the available pool.
-        if (in_array($data['condition_on_return'], ['good', 'fair'], true)) {
+        // Returned equipment is requestable again unless it is damaged.
+        if ($data['condition_on_return'] !== 'damaged') {
             $equipment->increment('available_quantity', $equipmentRequest->quantity);
         }
 
@@ -80,7 +79,7 @@ class ReleaseReturnController extends Controller
             'equipment', $equipmentRequest->id, 'returned', $equipment->name
         ));
 
-        return response()->json($equipmentTransaction->fresh(['equipmentRequest.equipment']));
+        return new EquipmentTransactionResource($equipmentTransaction->fresh(['equipmentRequest.equipment']));
     }
 
     public function releaseSupply(Request $request, SupplyRequest $supplyRequest)
@@ -110,6 +109,6 @@ class ReleaseReturnController extends Controller
             'supply', $supplyRequest->id, 'released', $supply->name
         ));
 
-        return response()->json($transaction->load('supplyRequest.supply'), 201);
+        return (new SupplyTransactionResource($transaction->load('supplyRequest.supply')))->response()->setStatusCode(201);
     }
 }

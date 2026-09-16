@@ -5,21 +5,25 @@ use App\Http\Controllers\Api\ConcernController;
 use App\Http\Controllers\Api\EquipmentController;
 use App\Http\Controllers\Api\EquipmentRequestController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\QrCodeController;
+use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\ReleaseReturnController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\PublicRequestController;
 use App\Http\Controllers\Api\SupplyController;
 use App\Http\Controllers\Api\SupplyRequestController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
 | Public routes
 |--------------------------------------------------------------------------
 */
-Route::post('/register', [AuthController::class, 'register']); // faculty / outsider self-signup
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
+Route::get('/public/requests/{trackingToken}', [PublicRequestController::class, 'show']);
+Route::get('/public/requests/{trackingToken}/qr', [PublicRequestController::class, 'qr']);
 
 /*
 |--------------------------------------------------------------------------
@@ -32,10 +36,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/profile', [AuthController::class, 'updateProfile']);
 
     // Read-only inventory browsing available to every authenticated role.
-    Route::get('/equipment', [EquipmentController::class, 'index']);
-    Route::get('/equipment/{equipment}', [EquipmentController::class, 'show']);
-    Route::get('/supplies', [SupplyController::class, 'index']);
-    Route::get('/supplies/{supply}', [SupplyController::class, 'show']);
+    Route::get('/equipment/barcode/{barcode}', [EquipmentController::class, 'statusByBarcode']);
+    Route::apiResource('/equipment', EquipmentController::class)->only(['index', 'show']);
+    Route::get('/supplies/barcode/{barcode}', [SupplyController::class, 'statusByBarcode']);
+    Route::apiResource('/supplies', SupplyController::class)->only(['index', 'show']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -44,15 +48,17 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 
     // Equipment requests: faculty + outsider create; admin/staff/owner can view.
-    Route::get('/equipment-requests', [EquipmentRequestController::class, 'index']);
-    Route::get('/equipment-requests/{equipmentRequest}', [EquipmentRequestController::class, 'show']);
+    Route::apiResource('/equipment-requests', EquipmentRequestController::class)
+        ->only(['index', 'show'])
+        ->parameters(['equipment-requests' => 'equipmentRequest']);
     Route::post('/equipment-requests', [EquipmentRequestController::class, 'store'])
         ->middleware('role:faculty,outsider');
     Route::post('/equipment-requests/{equipmentRequest}/cancel', [EquipmentRequestController::class, 'cancel']);
 
     // Supply requests: faculty only create; admin/staff/owner can view.
-    Route::get('/supply-requests', [SupplyRequestController::class, 'index']);
-    Route::get('/supply-requests/{supplyRequest}', [SupplyRequestController::class, 'show']);
+    Route::apiResource('/supply-requests', SupplyRequestController::class)
+        ->only(['index', 'show'])
+        ->parameters(['supply-requests' => 'supplyRequest']);
     Route::post('/supply-requests', [SupplyRequestController::class, 'store'])
         ->middleware('role:faculty');
     Route::post('/supply-requests/{supplyRequest}/cancel', [SupplyRequestController::class, 'cancel']);
@@ -76,13 +82,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/users/{user}/activate', [UserController::class, 'activate']);
 
         // Inventory management (create/edit/deactivate)
-        Route::post('/equipment', [EquipmentController::class, 'store']);
-        Route::put('/equipment/{equipment}', [EquipmentController::class, 'update']);
+        Route::apiResource('/equipment', EquipmentController::class)->except(['index', 'show']);
         Route::post('/equipment/{equipment}/deactivate', [EquipmentController::class, 'deactivate']);
         Route::delete('/equipment/{equipment}', [EquipmentController::class, 'destroy']);
 
-        Route::post('/supplies', [SupplyController::class, 'store']);
-        Route::put('/supplies/{supply}', [SupplyController::class, 'update']);
+        Route::apiResource('/supplies', SupplyController::class)->except(['index', 'show']);
         Route::post('/supplies/{supply}/deactivate', [SupplyController::class, 'deactivate']);
         Route::delete('/supplies/{supply}', [SupplyController::class, 'destroy']);
 
@@ -113,11 +117,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/equipment-transactions/{equipmentTransaction}/return', [ReleaseReturnController::class, 'returnEquipment']);
         Route::post('/supply-requests/{supplyRequest}/release', [ReleaseReturnController::class, 'releaseSupply']);
 
-        Route::post('/qrcode/scan', [QrCodeController::class, 'scan']);
+        Route::post('/barcode/scan', [BarcodeController::class, 'scan']);
     });
 
     // QR image lookup usable by admin (to print/display) and staff (to scan context)
     Route::middleware('role:admin,staff')->group(function () {
-        Route::get('/equipment/{equipment}/qrcode', [QrCodeController::class, 'show']);
+        Route::get('/equipment/{equipment}/barcode', [BarcodeController::class, 'show']);
+    });
+
     });
 });

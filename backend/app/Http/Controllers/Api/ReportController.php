@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\EquipmentResource;
+use App\Http\Resources\EquipmentTransactionResource;
+use App\Http\Resources\SupplyResource;
+use App\Http\Resources\SupplyTransactionResource;
 use App\Models\Equipment;
 use App\Models\EquipmentConcern;
 use App\Models\EquipmentRequest;
@@ -25,6 +29,8 @@ class ReportController extends Controller
             'low_stock_supplies' => Supply::whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
             'pending_equipment_requests' => EquipmentRequest::where('status', 'pending')->count(),
             'pending_supply_requests' => SupplyRequest::where('status', 'pending')->count(),
+            'awaiting_equipment_release' => EquipmentRequest::where('status', 'approved')->count(),
+            'awaiting_supply_release' => SupplyRequest::where('status', 'approved')->count(),
             'active_equipment_loans' => EquipmentTransaction::where('status', 'released')->count(),
             'open_concerns' => EquipmentConcern::where('status', 'open')->count(),
         ]);
@@ -38,12 +44,12 @@ class ReportController extends Controller
             $query->where('condition', $request->string('condition'));
         }
 
-        return response()->json($query->withCount(['requests', 'concerns'])->orderBy('name')->get());
+        return EquipmentResource::collection($query->withCount(['requests', 'concerns'])->orderBy('name')->get());
     }
 
     public function supplyReport()
     {
-        return response()->json(Supply::withCount('requests')->orderBy('name')->get());
+        return SupplyResource::collection(Supply::withCount('requests')->orderBy('name')->get());
     }
 
     public function supplyUsageReport(Request $request)
@@ -57,7 +63,7 @@ class ReportController extends Controller
             $query->whereDate('released_at', '<=', $request->date('to'));
         }
 
-        return response()->json($query->orderByDesc('released_at')->paginate(30));
+        return SupplyTransactionResource::collection($query->orderByDesc('released_at')->paginate(30));
     }
 
     public function transactionReport(Request $request)
@@ -65,12 +71,12 @@ class ReportController extends Controller
         $equipmentTx = EquipmentTransaction::with(['equipmentRequest.equipment', 'equipmentRequest.user'])
             ->orderByDesc('id')->limit(50)->get();
 
-        $supplyTx = SupplyTransaction::with(['supplyRequest.supply', 'supplyRequest.user'])
+        $supplyTx = SupplyTransaction::with(['supplyRequest.supply', 'supplyRequest.user', 'releasedBy'])
             ->orderByDesc('id')->limit(50)->get();
 
         return response()->json([
-            'equipment_transactions' => $equipmentTx,
-            'supply_transactions' => $supplyTx,
+            'equipment_transactions' => EquipmentTransactionResource::collection($equipmentTx),
+            'supply_transactions' => SupplyTransactionResource::collection($supplyTx),
         ]);
     }
 }

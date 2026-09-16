@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreSupplyRequest;
+use App\Http\Requests\UpdateSupplyRequest;
+use App\Http\Resources\SupplyResource;
 use App\Models\Supply;
 use Illuminate\Http\Request;
 
@@ -13,57 +16,64 @@ class SupplyController extends Controller
         $query = Supply::query()->where('is_active', true);
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->string('search').'%');
+            $search = $request->string('search');
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('barcode', 'like', '%'.$search.'%');
+            });
         }
         if ($request->boolean('low_stock')) {
             $query->whereColumn('stock_quantity', '<=', 'reorder_level');
         }
 
-        return response()->json($query->orderBy('name')->paginate(20));
+        return SupplyResource::collection($query->orderBy('name')->paginate(20));
     }
 
     public function show(Supply $supply)
     {
-        return response()->json($supply);
+        return new SupplyResource($supply);
     }
 
-    public function store(Request $request)
+    public function statusByBarcode(string $barcode)
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'max:255'],
-            'unit' => ['nullable', 'string', 'max:50'],
-            'stock_quantity' => ['required', 'integer', 'min:0'],
-            'reorder_level' => ['nullable', 'integer', 'min:0'],
-            'description' => ['nullable', 'string'],
+        $supply = Supply::where('barcode', $barcode)->first();
+
+        if (! $supply) {
+            return response()->json(['message' => 'No supply found for this barcode.'], 404);
+        }
+
+        $requests = $supply->requests()->latest()->limit(10)->get();
+
+        return response()->json([
+            'supply' => new SupplyResource($supply),
+            'latest_request' => $requests->first() ? new \App\Http\Resources\SupplyRequestResource($requests->first()) : null,
+            'requests' => \App\Http\Resources\SupplyRequestResource::collection($requests),
         ]);
+    }
+
+    public function store(StoreSupplyRequest $request)
+    {
+        $data = $request->validated();
 
         $supply = Supply::create($data);
 
-        return response()->json($supply, 201);
+        return (new SupplyResource($supply))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, Supply $supply)
+    public function update(UpdateSupplyRequest $request, Supply $supply)
     {
-        $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'max:255'],
-            'unit' => ['nullable', 'string', 'max:50'],
-            'stock_quantity' => ['sometimes', 'integer', 'min:0'],
-            'reorder_level' => ['nullable', 'integer', 'min:0'],
-            'description' => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
 
         $supply->update($data);
 
-        return response()->json($supply);
+        return new SupplyResource($supply);
     }
 
     public function deactivate(Supply $supply)
     {
         $supply->update(['is_active' => false]);
 
-        return response()->json(['message' => 'Supply deactivated.', 'supply' => $supply]);
+        return (new SupplyResource($supply))->additional(['message' => 'Supply deactivated.']);
     }
 
     public function destroy(Supply $supply)

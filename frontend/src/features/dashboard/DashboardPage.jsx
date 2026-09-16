@@ -1,0 +1,28 @@
+import { useAuth } from '../auth/AuthContext';
+import { ROLES } from '../../lib/constants';
+import AdminDashboard from './AdminDashboard';
+import StaffDashboard from './StaffDashboard';
+import RequesterDashboard from './RequesterDashboard';
+
+export default function DashboardPage() {
+	const { user } = useAuth();
+
+	return (
+		<div className="space-y-4">
+			<div>
+				<h1 className="text-xl font-bold text-slate-900">
+					Welcome back, {user.name}
+				</h1>
+				<p className="text-sm text-slate-500">
+					Here's what's happening in the inventory system today.
+				</p>
+			</div>
+
+			{user.role === ROLES.ADMIN && <AdminDashboard />}
+			{user.role === ROLES.STAFF && <StaffDashboard />}
+			{(user.role === ROLES.FACULTY || user.role === ROLES.OUTSIDER) && (
+				<RequesterDashboard />
+			)}
+		</div>
+	);
+}

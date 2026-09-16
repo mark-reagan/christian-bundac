@@ -3,13 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class SupplyRequest extends Model
 {
     protected $fillable = [
-        'user_id', 'supply_id', 'quantity', 'purpose', 'status',
+        'tracking_token', 'user_id', 'supply_id', 'quantity', 'purpose', 'status',
         'decline_reason', 'approved_by', 'approved_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (SupplyRequest $request) {
+            $request->tracking_token ??= (string) Str::uuid();
+        });
+    }
 
     protected $casts = [
         'approved_at' => 'datetime',
