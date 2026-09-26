@@ -69,7 +69,7 @@ export default function ReviewConcernModal({
 						setForm({ ...form, update_condition: e.target.value })
 					}
 				>
-					<option value="">Don't change</option>
+					<option value="">Don&apos;t change</option>
 					{EQUIPMENT_CONDITIONS.map((c) => (
 						<option key={c} value={c}>
 							{c.replace('_', ' ')}

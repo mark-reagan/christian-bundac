@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
@@ -8,17 +8,15 @@ import { supplyRequestsApi } from './api'
 
 const EMPTY = { quantity: 1, purpose: '' }
 
-export default function NewSupplyRequestModal({ open, onClose, supply, onSaved }) {
+export default function NewSupplyRequestModal(props) {
+  if (!props.open) return null
+  return <NewSupplyRequestModalContent key={props.supply?.id} {...props} />
+}
+
+function NewSupplyRequestModalContent({ open, onClose, supply, onSaved }) {
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setForm(EMPTY)
-      setError(null)
-    }
-  }, [open])
 
   async function handleSubmit(e) {
     e.preventDefault()

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
@@ -8,17 +8,15 @@ import { equipmentRequestsApi } from './api'
 
 const EMPTY = { quantity: 1, purpose: '', start_date: '', end_date: '' }
 
-export default function NewEquipmentRequestModal({ open, onClose, equipment, onSaved }) {
+export default function NewEquipmentRequestModal(props) {
+  if (!props.open) return null
+  return <NewEquipmentRequestModalContent key={props.equipment?.id} {...props} />
+}
+
+function NewEquipmentRequestModalContent({ open, onClose, equipment, onSaved }) {
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setForm(EMPTY)
-      setError(null)
-    }
-  }, [open])
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }))

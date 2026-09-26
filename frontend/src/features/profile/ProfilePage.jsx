@@ -4,7 +4,7 @@ import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import ErrorAlert from '../../components/ui/ErrorAlert';
 import Badge from '../../components/ui/Badge';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { authApi } from '../auth/api';
 import { useOfflineMode } from '../../hooks/useOfflineMode';
 

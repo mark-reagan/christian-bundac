@@ -1,4 +1,4 @@
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { ROLES } from '../../lib/constants';
 import AdminDashboard from './AdminDashboard';
 import StaffDashboard from './StaffDashboard';
@@ -14,7 +14,7 @@ export default function DashboardPage() {
 					Welcome back, {user.name}
 				</h1>
 				<p className="text-sm text-slate-500">
-					Here's what's happening in the inventory system today.
+					Here&apos;s what&apos;s happening in the inventory system today.
 				</p>
 			</div>
 

@@ -9,7 +9,7 @@ import Spinner from '../../components/ui/Spinner';
 import ErrorAlert from '../../components/ui/ErrorAlert';
 import Icon from '../../components/ui/Icon';
 import { useApiRequest } from '../../hooks/useApiRequest';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { ROLES } from '../../lib/constants';
 import { formatDateTime } from '../../lib/format';
 import { concernsApi } from './api';

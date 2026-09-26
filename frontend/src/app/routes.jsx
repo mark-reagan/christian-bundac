@@ -1,10 +1,11 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
 import ProtectedRoute from '../features/auth/ProtectedRoute';
 import PublicOnlyRoute from '../features/auth/PublicOnlyRoute';
 import { ROLES } from '../lib/constants';
+import Spinner from '../components/ui/Spinner';
 
 // Route-level code splitting: each page is only downloaded when visited.
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
@@ -38,7 +39,8 @@ const PublicRequestStatusPage = lazy(
 
 export default function AppRoutes() {
 	return (
-		<Routes>
+		<Suspense fallback={<Spinner label="Loading page…" />}>
+			<Routes>
 			<Route element={<PublicOnlyRoute />}>
 				<Route element={<AuthLayout />}>
 					<Route path="/login" element={<LoginPage />} />
@@ -97,6 +99,7 @@ export default function AppRoutes() {
 			</Route>
 
 			<Route path="*" element={<Navigate to="/" replace />} />
-		</Routes>
+			</Routes>
+		</Suspense>
 	);
 }

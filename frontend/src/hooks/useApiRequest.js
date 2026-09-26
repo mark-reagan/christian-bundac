@@ -11,7 +11,9 @@ export function useApiRequest(fetcher, deps = []) {
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const fetcherRef = useRef(fetcher);
-	fetcherRef.current = fetcher;
+	useEffect(() => {
+		fetcherRef.current = fetcher;
+	}, [fetcher]);
 
 	const refetch = useCallback(() => {
 		setLoading(true);
@@ -31,7 +33,31 @@ export function useApiRequest(fetcher, deps = []) {
 	}, []);
 
 	useEffect(() => {
-		refetch();
+		let active = true;
+		const controller = new AbortController();
+		Promise.resolve()
+			.then(() => fetcherRef.current(controller.signal))
+			.then((result) => {
+				if (active) {
+					setData(result);
+					setError(null);
+				}
+			})
+			.catch((err) => {
+				if (!active || err?.name === 'AbortError') return;
+				setError(
+					err instanceof ApiError
+						? err
+						: new ApiError('Something went wrong.', 0),
+				);
+			})
+			.finally(() => {
+				if (active) setLoading(false);
+			});
+		return () => {
+			active = false;
+			controller.abort();
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, deps);
 

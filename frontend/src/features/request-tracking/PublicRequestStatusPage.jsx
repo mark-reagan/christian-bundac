@@ -6,7 +6,7 @@ import Card from '../../components/ui/Card';
 import DeclineReasonModal from '../../components/ui/DeclineReasonModal';
 import ErrorAlert from '../../components/ui/ErrorAlert';
 import ReturnEquipmentModal from '../release-return/ReturnEquipmentModal';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { ROLES } from '../../lib/constants';
 import { formatDate } from '../../lib/format';
 import { equipmentRequestsApi } from '../equipment-requests/api';

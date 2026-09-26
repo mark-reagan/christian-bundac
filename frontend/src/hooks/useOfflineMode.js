@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../features/auth/AuthContext';
+import { useAuth } from '../features/auth/useAuth';
 import { ROLES } from '../lib/constants';
 
 export function useOfflineMode() {

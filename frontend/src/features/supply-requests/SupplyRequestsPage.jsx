@@ -8,7 +8,7 @@ import Spinner from '../../components/ui/Spinner';
 import ErrorAlert from '../../components/ui/ErrorAlert';
 import DeclineReasonModal from '../../components/ui/DeclineReasonModal';
 import { useApiRequest } from '../../hooks/useApiRequest';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { ROLES } from '../../lib/constants';
 import { supplyRequestsApi } from './api';
 import { useOfflineMode } from '../../hooks/useOfflineMode';

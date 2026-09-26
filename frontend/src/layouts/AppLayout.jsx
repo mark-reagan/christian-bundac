@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../features/auth/AuthContext';
+import { useAuth } from '../features/auth/useAuth';
 import NotificationBell from '../features/notifications/NotificationBell';
 import Icon from '../components/ui/Icon';
 import Spinner from '../components/ui/Spinner';

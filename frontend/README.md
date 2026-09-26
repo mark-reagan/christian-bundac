@@ -4,12 +4,6 @@ A React (JS, Vite) + Tailwind CSS frontend for the Laravel API, using a
 **feature-based architecture** and role-aware routing for Admin, Staff,
 Faculty, and Outsider/Municipal/LGU users.
 
-> **Sandbox note:** this environment has no outbound network access, so I
-> could not run `npm install` / `npm run build` here to verify the build
-> myself. The code was written and manually reviewed carefully (import
-> usage, Laravel relation-key naming, hook dependency rules), but please
-> run the build locally per the steps below before deploying.
-
 ---
 
 ## 1. Install & configure
@@ -23,7 +17,7 @@ cp .env.example .env
 Edit `.env` if your API isn't on the default host:
 
 ```
-VITE_API_URL=http://localhost:8000/api
+VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 ## 2. Run it
@@ -38,6 +32,28 @@ npm run lint       # ESLint
 `npm run build` outputs a minified, tree-shaken bundle to `dist/`, with
 `vendor` (React/Router) split into its own chunk and every route lazy-loaded
 (see below), plus a minified CSS file produced from Tailwind's purge.
+
+## Deploy to Cloudflare Pages
+
+Create a Pages project with these settings (the repository contains the
+frontend in the `frontend/` subdirectory):
+
+- **Root directory:** `frontend`
+- **Build command:** `npm run build`
+- **Build output directory:** `dist`
+- **Node.js version:** 20.19 or newer
+- **Build environment variable:** `VITE_API_URL=https://<your-api-host>/api/v1`
+
+Set `VITE_API_URL` in the Pages project for both production and preview
+deployments as needed. It is embedded in the browser bundle at build time,
+so it must be a public API base URL and must not contain credentials or
+secrets. Do not rely on a local `.env.production` file in Cloudflare builds.
+The app uses browser-side routes; Cloudflare Pages serves the SPA fallback
+automatically when the output has no `404.html`.
+
+The Laravel API must also allow the deployed Pages domain(s) in its
+`FRONTEND_URLS` environment variable for CORS. Include preview domains only
+if previews are expected to call the API.
 
 ---
 

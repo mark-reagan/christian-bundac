@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import ErrorAlert from '../../components/ui/ErrorAlert';
-import { useAuth } from './AuthContext';
+import { useAuth } from './useAuth';
 
 export default function LoginPage() {
 	const { login } = useAuth();

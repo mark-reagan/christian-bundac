@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import Select from '../../components/ui/Select'
 import Textarea from '../../components/ui/Textarea'
@@ -11,22 +11,20 @@ import { concernsApi } from './api'
 
 const EMPTY = { equipment_id: '', description: '', severity: 'minor' }
 
-export default function NewConcernModal({ open, onClose, onSaved }) {
+export default function NewConcernModal(props) {
+  if (!props.open) return null
+  return <NewConcernModalContent {...props} />
+}
+
+function NewConcernModalContent({ onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const { data: equipmentList } = useApiRequest(
-    (signal) => (open ? equipmentApi.list({ per_page: 100 }, signal) : Promise.resolve(null)),
-    [open]
+    (signal) => equipmentApi.list({ per_page: 100 }, signal),
+    []
   )
-
-  useEffect(() => {
-    if (open) {
-      setForm(EMPTY)
-      setError(null)
-    }
-  }, [open])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -44,7 +42,7 @@ export default function NewConcernModal({ open, onClose, onSaved }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Report Equipment Concern">
+    <Modal open onClose={onClose} title="Report Equipment Concern">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Select
           label="Equipment"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
@@ -16,30 +16,33 @@ const EMPTY = {
 	description: '',
 };
 
-export default function SupplyFormModal({ open, onClose, onSaved, supply }) {
+export default function SupplyFormModal(props) {
+	if (!props.open) return null;
+	return (
+		<SupplyFormModalContent
+			key={props.supply?.id ?? 'new'}
+			{...props}
+		/>
+	);
+}
+
+function SupplyFormModalContent({ open, onClose, onSaved, supply }) {
 	const isEdit = !!supply;
 	const { isReadOnlyAdmin } = useOfflineMode();
-	const [form, setForm] = useState(EMPTY);
+	const [form, setForm] = useState(() =>
+		supply
+			? {
+					name: supply.name,
+					category: supply.category || '',
+					unit: supply.unit || 'pcs',
+					stock_quantity: supply.stock_quantity,
+					reorder_level: supply.reorder_level,
+					description: supply.description || '',
+				}
+			: { ...EMPTY },
+	);
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
-
-	useEffect(() => {
-		if (open) {
-			setForm(
-				supply
-					? {
-							name: supply.name,
-							category: supply.category || '',
-							unit: supply.unit || 'pcs',
-							stock_quantity: supply.stock_quantity,
-							reorder_level: supply.reorder_level,
-							description: supply.description || '',
-						}
-					: EMPTY,
-			);
-			setError(null);
-		}
-	}, [open, supply]);
 
 	function update(field, value) {
 		setForm((f) => ({ ...f, [field]: value }));

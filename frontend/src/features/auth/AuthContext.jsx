@@ -1,34 +1,36 @@
 import {
-	createContext,
 	useCallback,
-	useContext,
 	useEffect,
 	useMemo,
 	useState,
 } from 'react';
 import { getToken, setToken as persistToken } from '../../lib/apiClient';
 import { authApi } from './api';
-
-const AuthContext = createContext(null);
+import AuthContext from './authContext';
 
 export function AuthProvider({ children }) {
 	const [user, setUser] = useState(null);
-	const [initializing, setInitializing] = useState(true);
+	const [initializing, setInitializing] = useState(() => Boolean(getToken()));
 
 	useEffect(() => {
 		const token = getToken();
-		if (!token) {
-			setInitializing(false);
-			return;
-		}
+		if (!token) return;
+		let active = true;
 		authApi
 			.me()
-			.then(setUser)
+			.then((freshUser) => {
+				if (active) setUser(freshUser);
+			})
 			.catch(() => {
 				persistToken(null);
-				setUser(null);
+				if (active) setUser(null);
 			})
-			.finally(() => setInitializing(false));
+			.finally(() => {
+				if (active) setInitializing(false);
+			});
+		return () => {
+			active = false;
+		};
 	}, []);
 
 	const login = useCallback(async (credentials) => {
@@ -67,10 +69,4 @@ export function AuthProvider({ children }) {
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-	const ctx = useContext(AuthContext);
-	if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
-	return ctx;
 }

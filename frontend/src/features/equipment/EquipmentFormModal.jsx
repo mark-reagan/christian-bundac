@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
@@ -17,7 +17,17 @@ const EMPTY = {
 	condition: 'good',
 };
 
-export default function EquipmentFormModal({
+export default function EquipmentFormModal(props) {
+	if (!props.open) return null;
+	return (
+		<EquipmentFormModalContent
+			key={props.equipment?.id ?? 'new'}
+			{...props}
+		/>
+	);
+}
+
+function EquipmentFormModalContent({
 	open,
 	onClose,
 	onSaved,
@@ -25,26 +35,19 @@ export default function EquipmentFormModal({
 }) {
 	const isEdit = !!equipment;
 	const { isReadOnlyAdmin } = useOfflineMode();
-	const [form, setForm] = useState(EMPTY);
+	const [form, setForm] = useState(() =>
+		equipment
+			? {
+					name: equipment.name,
+					category: equipment.category || '',
+					description: equipment.description || '',
+					total_quantity: equipment.total_quantity,
+					condition: equipment.condition,
+				}
+			: { ...EMPTY },
+	);
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
-
-	useEffect(() => {
-		if (open) {
-			setForm(
-				equipment
-					? {
-							name: equipment.name,
-							category: equipment.category || '',
-							description: equipment.description || '',
-							total_quantity: equipment.total_quantity,
-							condition: equipment.condition,
-						}
-					: EMPTY,
-			);
-			setError(null);
-		}
-	}, [open, equipment]);
 
 	function update(field, value) {
 		setForm((f) => ({ ...f, [field]: value }));

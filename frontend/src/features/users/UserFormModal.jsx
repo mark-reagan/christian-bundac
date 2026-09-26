@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -16,30 +16,30 @@ const EMPTY = {
 	contact_number: '',
 };
 
-export default function UserFormModal({ open, onClose, onSaved, user }) {
+export default function UserFormModal(props) {
+	if (!props.open) return null;
+	return (
+		<UserFormModalContent key={props.user?.id ?? 'new'} {...props} />
+	);
+}
+
+function UserFormModalContent({ open, onClose, onSaved, user }) {
 	const isEdit = !!user;
 	const { isReadOnlyAdmin } = useOfflineMode();
-	const [form, setForm] = useState(EMPTY);
+	const [form, setForm] = useState(() =>
+		user
+			? {
+					name: user.name,
+					email: user.email,
+					password: '',
+					role: user.role,
+					department: user.department || '',
+					contact_number: user.contact_number || '',
+				}
+			: { ...EMPTY },
+	);
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
-
-	useEffect(() => {
-		if (open) {
-			setForm(
-				user
-					? {
-							name: user.name,
-							email: user.email,
-							password: '',
-							role: user.role,
-							department: user.department || '',
-							contact_number: user.contact_number || '',
-						}
-					: EMPTY,
-			);
-			setError(null);
-		}
-	}, [open, user]);
 
 	function update(field, value) {
 		setForm((f) => ({ ...f, [field]: value }));
