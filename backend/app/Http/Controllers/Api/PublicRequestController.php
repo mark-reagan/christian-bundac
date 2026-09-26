@@ -49,7 +49,12 @@ class PublicRequestController extends Controller
 
         abort_unless($exists, 404);
 
-        $trackingUrl = rtrim(config('app.frontend_url'), '/').'/track/'.$trackingToken;
+        $frontendUrl = config('app.frontend_url');
+        if (! $frontendUrl || empty(trim($frontendUrl))) {
+            abort(500, 'Frontend URL not configured. Set FRONTEND_URL or FRONTEND_URLS in .env');
+        }
+
+        $trackingUrl = rtrim($frontendUrl, '/').'/track/'.$trackingToken;
         $result = (new Builder(
             writer: new PngWriter,
             data: $trackingUrl,
