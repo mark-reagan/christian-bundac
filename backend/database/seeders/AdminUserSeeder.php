@@ -10,24 +10,37 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(
-            ['email' => 'admin@school.edu'],
-            [
-                'name' => 'System Administrator',
-                'password' => Hash::make('password123'),
-                'role' => 'admin',
-                'is_active' => true,
-            ]
-        );
+        $isProduction = app()->environment('production');
 
-        User::firstOrCreate(
-            ['email' => 'staff@school.edu'],
+        $users = [
             [
+                'email' => $isProduction ? env('ADMIN_EMAIL') : env('ADMIN_EMAIL', 'admin@school.edu'),
+                'password' => $isProduction ? env('ADMIN_PASSWORD') : env('ADMIN_PASSWORD', 'password123'),
+                'name' => 'System Administrator',
+                'role' => 'admin',
+            ],
+            [
+                'email' => $isProduction ? env('STAFF_EMAIL') : env('STAFF_EMAIL', 'staff@school.edu'),
+                'password' => $isProduction ? env('STAFF_PASSWORD') : env('STAFF_PASSWORD', 'password123'),
                 'name' => 'Inventory Staff',
-                'password' => Hash::make('password123'),
                 'role' => 'staff',
-                'is_active' => true,
-            ]
-        );
+            ],
+        ];
+
+        foreach ($users as $user) {
+            if (blank($user['email']) || blank($user['password'])) {
+                continue;
+            }
+
+            User::firstOrCreate(
+                ['email' => $user['email']],
+                [
+                    'name' => $user['name'],
+                    'password' => Hash::make($user['password']),
+                    'role' => $user['role'],
+                    'is_active' => true,
+                ]
+            );
+        }
     }
 }

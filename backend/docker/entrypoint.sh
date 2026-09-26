@@ -19,5 +19,6 @@ chmod -R ug+rwX storage bootstrap/cache
 # Render's free web services do not provide a pre-deploy command. Apply any
 # pending database migrations before Apache starts serving requests.
 php artisan migrate --force
+php artisan db:seed --force
 
 exec apache2-foreground
