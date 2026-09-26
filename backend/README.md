@@ -56,3 +56,19 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Deploying the API to Render with Docker
+
+Create a Render **Web Service** from this repository, set **Root Directory** to `backend`, and select **Docker** as the runtime. Render will build `backend/Dockerfile`; the container serves Laravel's `public/` directory and listens on Render's assigned `PORT`. The `/up` endpoint is available as a health check.
+
+Set these environment variables in Render (use your actual service/domain values):
+
+- `APP_ENV=production`, `APP_DEBUG=false`, and a persistent `APP_KEY` generated with `php artisan key:generate --show`.
+- `APP_URL=https://<your-render-service>.onrender.com`.
+- `FRONTEND_URL` and `FRONTEND_URLS` to the Vercel origin, e.g. `https://<your-app>.vercel.app` (no path).
+- `DB_CONNECTION=mysql` and the `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` values for a MySQL database reachable from Render. Do not use `127.0.0.1` for a remote database.
+- `LOG_CHANNEL=stderr`.
+
+Run `php artisan migrate --force` once through the Render Shell after setting up the database, and configure it as the service's pre-deploy command for future releases if that feature is available on your Render plan. Do not run production seeders without reviewing their default credentials. Render's local filesystem is ephemeral; use a managed database and durable object storage if the app later needs persistent uploads.
+
+The Docker image explicitly installs PHP GD (for PNG QR generation) and `pdo_mysql`, and Composer verifies those requirements during image build. To build and smoke-test locally, run `docker build -t inventory-api .` from `backend/`, then start the container with a valid `.env`/database configuration and verify `GET /up`.
