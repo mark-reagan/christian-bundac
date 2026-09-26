@@ -41,64 +41,64 @@ export default function AppRoutes() {
 	return (
 		<Suspense fallback={<Spinner label="Loading page…" />}>
 			<Routes>
-			<Route element={<PublicOnlyRoute />}>
-				<Route element={<AuthLayout />}>
-					<Route path="/login" element={<LoginPage />} />
+				<Route element={<PublicOnlyRoute />}>
+					<Route element={<AuthLayout />}>
+						<Route path="/login" element={<LoginPage />} />
+					</Route>
 				</Route>
-			</Route>
-			<Route
-				path="/track/:trackingToken"
-				element={<PublicRequestStatusPage />}
-			/>
+				<Route
+					path="/track/:trackingToken"
+					element={<PublicRequestStatusPage />}
+				/>
 
-			<Route element={<ProtectedRoute />}>
-				<Route element={<AppLayout />}>
-					<Route path="/" element={<DashboardPage />} />
-					<Route path="/equipment" element={<EquipmentListPage />} />
-					<Route
-						element={
-							<ProtectedRoute
-								roles={[ROLES.ADMIN, ROLES.STAFF, ROLES.FACULTY]}
-							/>
-						}
-					>
-						<Route path="/supplies" element={<SuppliesListPage />} />
-					</Route>
-					<Route
-						path="/equipment-requests"
-						element={<EquipmentRequestsPage />}
-					/>
-					<Route path="/concerns" element={<ConcernsPage />} />
-					<Route path="/notifications" element={<NotificationsPage />} />
-					<Route path="/profile" element={<ProfilePage />} />
-
-					<Route
-						element={
-							<ProtectedRoute
-								roles={[ROLES.ADMIN, ROLES.STAFF, ROLES.FACULTY]}
-							/>
-						}
-					>
-						<Route path="/supply-requests" element={<SupplyRequestsPage />} />
-					</Route>
-
-					<Route element={<ProtectedRoute roles={[ROLES.STAFF]} />}>
-						<Route path="/release-return" element={<ReleaseReturnPage />} />
-						<Route path="/qr-scan" element={<QrScanPage />} />
+				<Route element={<ProtectedRoute />}>
+					<Route element={<AppLayout />}>
+						<Route path="/" element={<DashboardPage />} />
+						<Route path="/equipment" element={<EquipmentListPage />} />
 						<Route
-							path="/barcode-scan"
-							element={<Navigate to="/qr-scan" replace />}
+							element={
+								<ProtectedRoute
+									roles={[ROLES.ADMIN, ROLES.STAFF, ROLES.FACULTY]}
+								/>
+							}
+						>
+							<Route path="/supplies" element={<SuppliesListPage />} />
+						</Route>
+						<Route
+							path="/equipment-requests"
+							element={<EquipmentRequestsPage />}
 						/>
-					</Route>
+						<Route path="/concerns" element={<ConcernsPage />} />
+						<Route path="/notifications" element={<NotificationsPage />} />
+						<Route path="/profile" element={<ProfilePage />} />
 
-					<Route element={<ProtectedRoute roles={[ROLES.ADMIN]} />}>
-						<Route path="/users" element={<UsersPage />} />
-						<Route path="/reports" element={<ReportsPage />} />
+						<Route
+							element={
+								<ProtectedRoute
+									roles={[ROLES.ADMIN, ROLES.STAFF, ROLES.FACULTY]}
+								/>
+							}
+						>
+							<Route path="/supply-requests" element={<SupplyRequestsPage />} />
+						</Route>
+
+						<Route element={<ProtectedRoute roles={[ROLES.STAFF]} />}>
+							<Route path="/release-return" element={<ReleaseReturnPage />} />
+							<Route path="/qr-scan" element={<QrScanPage />} />
+							<Route
+								path="/barcode-scan"
+								element={<Navigate to="/qr-scan" replace />}
+							/>
+						</Route>
+
+						<Route element={<ProtectedRoute roles={[ROLES.ADMIN]} />}>
+							<Route path="/users" element={<UsersPage />} />
+							<Route path="/reports" element={<ReportsPage />} />
+						</Route>
 					</Route>
 				</Route>
-			</Route>
 
-			<Route path="*" element={<Navigate to="/" replace />} />
+				<Route path="*" element={<Navigate to="/" replace />} />
 			</Routes>
 		</Suspense>
 	);

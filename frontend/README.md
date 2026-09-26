@@ -45,9 +45,13 @@ frontend in the `frontend/` subdirectory):
 - **Build environment variable:** `VITE_API_URL=https://<your-api-host>/api/v1`
 
 Set `VITE_API_URL` in the Pages project for both production and preview
-deployments as needed. It is embedded in the browser bundle at build time,
-so it must be a public API base URL and must not contain credentials or
-secrets. Do not rely on a local `.env.production` file in Cloudflare builds.
+deployments as needed. Set the production value only in Cloudflare Pages
+project settings; do not put the production hostname in source files. The
+production build fails if `VITE_API_URL` is missing or points to localhost.
+The variable is embedded in the browser bundle at build time, so it is a public
+endpoint rather than a secret; never include credentials or secrets in it.
+Local development uses localhost by default. Do not rely on a local
+`.env.production` file in Cloudflare builds.
 The app uses browser-side routes; Cloudflare Pages serves the SPA fallback
 automatically when the output has no `404.html`.
 
@@ -176,9 +180,9 @@ checks, stock updates) works without it.
 
 ## Default accounts (from the API's seeder)
 
-| Role  | Email             | Password    |
-|-------|-------------------|-------------|
-| Admin | admin@school.edu  | password123 |
-| Staff | staff@school.edu  | password123 |
+| Role  | Email            | Password    |
+| ----- | ---------------- | ----------- |
+| Admin | admin@school.edu | password123 |
+| Staff | staff@school.edu | password123 |
 
 Faculty and Outsider/LGU accounts self-register via the Register page.

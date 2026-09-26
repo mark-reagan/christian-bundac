@@ -1,9 +1,4 @@
-import {
-	useCallback,
-	useEffect,
-	useMemo,
-	useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getToken, setToken as persistToken } from '../../lib/apiClient';
 import { authApi } from './api';
 import AuthContext from './authContext';

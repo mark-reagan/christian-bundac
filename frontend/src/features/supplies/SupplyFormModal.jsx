@@ -18,12 +18,7 @@ const EMPTY = {
 
 export default function SupplyFormModal(props) {
 	if (!props.open) return null;
-	return (
-		<SupplyFormModalContent
-			key={props.supply?.id ?? 'new'}
-			{...props}
-		/>
-	);
+	return <SupplyFormModalContent key={props.supply?.id ?? 'new'} {...props} />;
 }
 
 function SupplyFormModalContent({ open, onClose, onSaved, supply }) {

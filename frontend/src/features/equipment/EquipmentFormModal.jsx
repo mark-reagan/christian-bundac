@@ -20,19 +20,11 @@ const EMPTY = {
 export default function EquipmentFormModal(props) {
 	if (!props.open) return null;
 	return (
-		<EquipmentFormModalContent
-			key={props.equipment?.id ?? 'new'}
-			{...props}
-		/>
+		<EquipmentFormModalContent key={props.equipment?.id ?? 'new'} {...props} />
 	);
 }
 
-function EquipmentFormModalContent({
-	open,
-	onClose,
-	onSaved,
-	equipment,
-}) {
+function EquipmentFormModalContent({ open, onClose, onSaved, equipment }) {
 	const isEdit = !!equipment;
 	const { isReadOnlyAdmin } = useOfflineMode();
 	const [form, setForm] = useState(() =>

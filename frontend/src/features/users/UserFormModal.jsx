@@ -18,9 +18,7 @@ const EMPTY = {
 
 export default function UserFormModal(props) {
 	if (!props.open) return null;
-	return (
-		<UserFormModalContent key={props.user?.id ?? 'new'} {...props} />
-	);
+	return <UserFormModalContent key={props.user?.id ?? 'new'} {...props} />;
 }
 
 function UserFormModalContent({ open, onClose, onSaved, user }) {
